@@ -3,8 +3,6 @@ from discord import app_commands
 import math
 from discord.ext import commands
 import datetime
-import pytesseract
-import cv2
 import numpy as np
 
 class Test(commands.Cog):
@@ -117,11 +115,12 @@ class Test(commands.Cog):
             ranges = {
     "EF": {
         "war/mage": {
-            "secret": {"weapon": (1527126, 1730499)},
+            "secret": {"weapon": (1527126, 1730499), "armor": (1324463, 1577538)},
             "legendary": {"weapon": (1324010, 1500035), "armor": (1141963, 1294038)},
             "epic": {"armor": (1016980, 1152418)},
         },
         "guardian": {
+            "secret": {"armor": (31066616, 34005283)},
             "legendary": {"armor": (22066616, 25005283)},
         },
     },
@@ -138,18 +137,18 @@ class Test(commands.Cog):
             "legendary": {"armor": (7723329, 8751857)},
         },
     },
-}
+    }
 
             if maps.value not in ranges:
                 await interaction.response.send_message(f"Invalid map: {maps.value}")
                 return
 
             if classes.value not in ranges[maps.value]:
-                await interaction.response.send_message(f"Invalid class: {classes.value} on map {maps.value}")
+                await interaction.response.send_message(f"Invalid class: {classes.value}")
                 return
 
             if rarity.value not in ranges[maps.value][classes.value]:
-                await interaction.response.send_message(f"Invalid rarity: {rarity.value} on map {maps.value} for class {classes.value}")
+                await interaction.response.send_message(f"Invalid rarity: {rarity.value} for class {classes.value}")
                 return
 
             minimum_value, maximum_value = ranges[maps.value][classes.value][rarity.value].get(item, (None, None))
@@ -160,7 +159,7 @@ class Test(commands.Cog):
                     return
             
             if classes.value == "guardian" and item == "weapon":
-                await interaction.response.send_message("Hey, you can't match a weapon with the Guardian class! There is no such thing.")
+                await interaction.response.send_message("You cannot match a weapon with the guardian class!")
                 return
             
             if minimum_value is None or maximum_value is None:
@@ -180,44 +179,6 @@ class Test(commands.Cog):
             await interaction.response.send_message(embed=embed)
         except Exception as e:
             await interaction.response.send_message(f"An error occurred: {e}")
-
-    
-    @app_commands.command(name="image_reader", description="Read numbers from an image")
-    async def image_reader(self, interaction: discord.Interaction, image: discord.Attachment):
-        if not image.content_type.startswith("image/"):
-            await interaction.response.send_message("Please attach an image.")
-            return
-        
-        image_data = await image.read()
-
-        img = cv2.imdecode(np.frombuffer(image_data, np.uint8), cv2.IMREAD_COLOR)
-
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        text = pytesseract.image_to_string(gray)
-
-        lines = text.splitlines()
-
-        lines = [line for line in lines if line.strip()]
-
-        if len(lines) not in [6, 7]:
-            await interaction.response.send_message("Invalid image. Please attach an image with either 6 or 7 lines of numbers.")
-            return
-
-        second_line = lines[1]
-        third_line = lines[2]
-
-        higher_line = max(second_line, third_line, key=lambda x: float(x.replace(',', '')))
-
-        second_last_line = lines[-2]
-
-        embed = discord.Embed(title="Extracted Numbers", color=0x280137)
-        embed.add_field(name="Higher Line", value=higher_line, inline=False)
-        embed.add_field(name="Second Last Line", value=second_last_line, inline=False)
-        embed.timestamp = datetime.datetime.now()
-        embed.set_footer(text=f"{interaction.guild.name} |  Annarex", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
-
-        await interaction.response.send_message(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Test(bot))
